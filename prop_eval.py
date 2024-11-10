@@ -1,15 +1,17 @@
 import numpy as np
 
 def mabo(rect, ground_truth, coord = None):
+    box = rect.copy()
+    
     if coord == 'xywh':                 # If coordinates are given as (x, y, w, h) instead of (xmin, ymin, xmax, ymax)
-        rect[:, 2] += rect[:, 0]
-        rect[:, 3] += rect[:, 1]
+        box[:, 2] += box[:, 0]
+        box[:, 3] += box[:, 1]
 
     average = 0.0
     for i in range(0, np.shape(ground_truth)[0]):
         best_cand = []
-        for j in range(0, np.shape(rect)[0]):
-            overlap = iou(ground_truth[i], rect[j])
+        for j in range(0, np.shape(box)[0]):
+            overlap = iou(ground_truth[i], box[j])
             best_cand.append(overlap)
         
         best = max(best_cand)
@@ -19,19 +21,21 @@ def mabo(rect, ground_truth, coord = None):
     return average
 
 def detection_rate(rect, ground_truth, k = 0.8, coord = None):
+    box = rect.copy()
+
     if coord == 'xywh':                 # If coordinates are given as (x, y, w, h) instead of (xmin, ymin, xmax, ymax)
-        rect[:, 2] += rect[:, 0]
-        rect[:, 3] += rect[:, 1]
+        box[:, 2] += box[:, 0]
+        box[:, 3] += box[:, 1]
 
     good_prop = 0
-    for i in range(0, np.shape(rect)[0]):
-        for j in range(0, np.shape(ground_truth)[0]):
-            iou_k = iou(ground_truth[j], rect[i])
+    for i in range(0, np.shape(ground_truth)[0]):
+        for j in range(0, np.shape(box)[0]):
+            iou_k = iou(ground_truth[i], box[j])
             if iou_k > k:
                 good_prop += 1
                 break
 
-    per = good_prop / np.shape(rect)[0]
+    per = good_prop / np.shape(ground_truth)[0]
 
     return per
 
