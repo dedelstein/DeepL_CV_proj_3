@@ -26,6 +26,8 @@
 ### -- -o and -e mean append, -oo and -eo mean overwrite -- 
 #BSUB -o Output_%J.out 
 #BSUB -e Output_%J.err 
+#module load python3/3.12.4
+#source /zhome/91/9/214141/default_venv/bin/activate
 
 # here follow the commands you want to execute with input.in as the input file
 
