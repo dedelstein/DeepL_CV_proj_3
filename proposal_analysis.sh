@@ -2,7 +2,7 @@
 
 ### General options 
 ### -- specify queue -- 
-#BSUB -q gpua100
+#BSUB -q gpua10
 ### -- set the job Name -- 
 #BSUB -J Proposal_Analysis
 ### -- ask for number of cores (default: 1) -- 
@@ -26,11 +26,10 @@
 ### -- -o and -e mean append, -oo and -eo mean overwrite -- 
 #BSUB -o Output_%J.out 
 #BSUB -e Output_%J.err 
-#module load python3/3.12.4
-#source /zhome/91/9/214141/default_venv/bin/activate
+module load python3/3.12.4
+source /zhome/91/9/214141/default_venv/bin/activate
 
 # here follow the commands you want to execute with input.in as the input file
 
-nvidia-smi
-module load cuda/11.6
-region_proposal_analysis.py < potholes.zip > results.csv
+##nvidia-smi
+torchrun --standalone --nproc_per_node=1 region_proposal_analysis.py
