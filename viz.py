@@ -4,15 +4,15 @@ import matplotlib.pyplot as plt
 def visualize_results(results_file):
     # Read the results
     df = pd.read_csv(results_file)
-    
+    dff = pd.read_csv('results_final.csv')
     
     # Create figure with two subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
     
     # Plot MABO
-    ax1.plot(df['num_rects'], df['mabo_edge'], '-o', label='EdgeBoxes', alpha=0.7)
-    ax1.plot(df['num_rects'], df['mabo_ss_fast'], '-o', label='SS Fast', alpha=0.7)
-    ax1.plot(df['num_rects'], df['mabo_ss_qual'], '-o', label='SS Quality', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_edge'], '-o', label='EdgeBoxes', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_ss_fast'], '-o', label='SS Fast', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_ss_qual'], '-o', label='SS Quality', alpha=0.7)
     ax1.set_xlabel('Number of Proposals')
     ax1.set_ylabel('MABO')
     ax1.set_title('Mean Average Best Overlap by Method')
@@ -48,15 +48,15 @@ def visualize_results(results_file):
 def visualize_results_detailed(results_file):
     # Read the results
     df = pd.read_csv(results_file)
-    
+    dff = pd.read_csv('results_final.csv')
     
     # Create figure with four subplots
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
     
     # Plot MABO
-    ax1.plot(df['num_rects'], df['mabo_edge'], '-o', label='EdgeBoxes', alpha=0.7)
-    ax1.plot(df['num_rects'], df['mabo_ss_fast'], '-o', label='SS Fast', alpha=0.7)
-    ax1.plot(df['num_rects'], df['mabo_ss_qual'], '-o', label='SS Quality', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_edge'], '-o', label='EdgeBoxes', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_ss_fast'], '-o', label='SS Fast', alpha=0.7)
+    ax1.plot(dff['num_rects'], dff['mabo_ss_qual'], '-o', label='SS Quality', alpha=0.7)
     ax1.set_xlabel('Number of Proposals')
     ax1.set_ylabel('MABO')
     ax1.set_title('Mean Average Best Overlap by Method')

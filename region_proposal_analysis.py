@@ -12,9 +12,7 @@ from tqdm import tqdm
 def edge_boxes(image_path, num_rects, model):
     edge_detection = cv2.ximgproc.createStructuredEdgeDetection(model)
     image = cv2.imread(image_path)
-    # Resize image to speed up edge detection
-    #scale_factor = 0.5
-    #image = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
+
     rgb_im = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     edges = edge_detection.detectEdges(np.float32(rgb_im) / 255.0)
     orimap = edge_detection.computeOrientation(edges)
@@ -22,34 +20,25 @@ def edge_boxes(image_path, num_rects, model):
     edge_boxes = cv2.ximgproc.createEdgeBoxes()
     edge_boxes.setMaxBoxes(num_rects)
     boxes, scores = edge_boxes.getBoundingBoxes(edges, orimap)
-    # Scale boxes back to original size
-    #boxes = boxes * (1/scale_factor)
+
     return boxes, scores
 
 def selective_search(image_path, num_rects, quality=True):
     ss = cv2.ximgproc.segmentation.createSelectiveSearchSegmentation()
     image = cv2.imread(image_path)
-    # Resize image to speed up selective search
-    #scale_factor = 0.5
-    #image = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
+
     ss.setBaseImage(image)
     if quality:
         ss.switchToSelectiveSearchQuality()
     else:
         ss.switchToSelectiveSearchFast()
     rects = ss.process()
-    # Scale rectangles back to original size
-    #rects = rects * (1/scale_factor)
+
     return rects[:num_rects]
 
 def abo(boxes, ground_truths):
-    abo = torch.max(ops.box_iou(boxes, ground_truths), dim=0).values.sum().item() / ground_truths.numel()
+    abo = torch.max(ops.box_iou(boxes, ground_truths), dim=0).values.sum().item() / len(ground_truths)
     return abo
-
-def recall(boxes, ground_truths, k = 0.7):
-    ious = ops.box_iou(boxes, ground_truths)
-    recall = torch.any(torch.gt(ious, k), dim=0).sum().item() / ground_truths.shape[0]
-    return recall
 
 def read_xml(path: str):  
     tree = ET.parse(path)
@@ -65,18 +54,14 @@ def read_xml(path: str):
         obj_list.append(bbox)
     return obj_list, size
 
-def save_results(num_rects, mabo_scores, recalls, output_file='results_final.csv'):
+def save_results(num_rects, mabo_scores, output_file='results_final.csv'):
     row_dict = {
         'num_rects': num_rects,
         'mabo_edge': mabo_scores[0],
         'mabo_ss_fast': mabo_scores[1],
         'mabo_ss_qual': mabo_scores[2]
     }
-    
-    for i, k in enumerate([0.5, 0.7, 0.9]):
-        for j, method in enumerate(['edge', 'ss_fast', 'ss_qual']):
-            row_dict[f'recall_{method}_k{k}'] = recalls[i][j]
-    
+      
     df = pd.DataFrame([row_dict])
     
     if not os.path.exists(output_file):
@@ -90,7 +75,7 @@ def main():
     splits = 'Potholes/splits.json'
     model = 'model.yml'
     device = "cpu"
-    output_file = 'results.csv'
+    output_file = 'results_final.csv'
     
     # Optimization parameters
     subsample = 50  # Number of images to sample each iteration
@@ -98,7 +83,7 @@ def main():
     max_rects = 2000  # Maximum number of rectangles
     
     cv2.setUseOptimized(True)
-    cv2.setNumThreads(4)
+    cv2.setNumThreads(6)
 
     # Load full dataset list
     train_mask_list = [path + f for f in json.load(open(splits))['train']]
@@ -122,7 +107,6 @@ def main():
             edge_abo = 0
             ss_fast_abo = 0
             ss_qual_abo = 0
-            recalls = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
             
             for datum in dataset:
                 image = datum[0]
@@ -147,24 +131,17 @@ def main():
                     ss_fast_abo += abo(ss_fast, ground_truths)
                     ss_qual_abo += abo(ss_qual, ground_truths)
 
-                    for idx, k in enumerate([.5, .7, .9]):
-                        recall_edge = recall(edgeboxes, ground_truths, k=k)
-                        recall_ss_fast = recall(ss_fast, ground_truths, k=k)
-                        recall_ss_qual = recall(ss_qual, ground_truths, k=k)
-                        recalls[idx] += np.array([recall_edge, recall_ss_fast, recall_ss_qual])
-                
                 except Exception as e:
                     print(f"Error processing image {image}: {str(e)}")
                     continue
 
-            recalls = recalls / len(dataset)
             mabo_scores = [
                 edge_abo / len(dataset),
                 ss_fast_abo / len(dataset),
                 ss_qual_abo / len(dataset)
             ]
 
-            save_results(num_rects, mabo_scores, recalls, output_file)
+            save_results(num_rects, mabo_scores, output_file)
             
             num_rects += rect_step
             pbar.update(1)

@@ -2,7 +2,6 @@ import cv2
 import json
 import pickle
 import torch
-import numpy as np
 import torchvision.ops as ops
 from torchvision import tv_tensors
 from xml.etree import ElementTree as ET
@@ -40,41 +39,45 @@ def main():
     path = 'Potholes/annotated-images/'
     splits = 'Potholes/splits.json'
     num_rects = 750
-    device = "cpu"
     output_file = 'proposals.pkl'
     
     cv2.setUseOptimized(True)
-    cv2.setNumThreads(4)
+    cv2.setNumThreads(8)
 
     # Load full dataset list
     train_mask_list = [path + f for f in json.load(open(splits))['train']]
     train_img_list = [filename.replace('xml', 'jpg') for filename in train_mask_list]
+    val_mask_list = [path + f for f in json.load(open(splits))['test']]
+    val_img_list = [filename.replace('xml', 'jpg') for filename in val_mask_list]
+
+    mask_list = train_mask_list + val_mask_list
+    img_list = train_img_list + val_img_list
 
     dataset = []
-    for idx, mask in enumerate(train_mask_list):
+    for idx, mask in enumerate(mask_list):
         ground_truths, size = read_xml(mask)
         ground_truths = tv_tensors.BoundingBoxes(ground_truths, format="XYXY", canvas_size=size)
-        image = train_img_list[idx]
+        image = img_list[idx]
         dataset.append([image, ground_truths])
-        
+    
     results = []
     for datum in tqdm(dataset, desc="Processing images"):
         image = datum[0]
-        ground_truths = datum[1].to(device)
+        ground_truths = datum[1]
         size = ground_truths.canvas_size
 
         try:
             # Get proposals
             ss_fast = selective_search(image, num_rects=num_rects)
             ss_fast = ops.box_convert(torch.tensor(ss_fast), "xywh", "xyxy")
-            ss_fast = tv_tensors.BoundingBoxes(ss_fast, format="XYXY", canvas_size=size).to(device)
-            results.append([image, ground_truths, results])
+            ss_fast = tv_tensors.BoundingBoxes(ss_fast, format="XYXY", canvas_size=size)
 
         except Exception as e:
             print(f"Error processing image {image}: {str(e)}")
             continue
+        
+        results.append([image, ground_truths, ss_fast])
 
-    print(results)
     save_results(results, output_file)
 
 if __name__ == "__main__":
